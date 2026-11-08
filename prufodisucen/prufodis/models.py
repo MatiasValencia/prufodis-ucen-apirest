@@ -25,9 +25,24 @@ class Asignatura(models.Model):
 
 class Asistencia(models.Model):
     asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE)
+    nombreAsignatura = models.CharField(max_length=100)
     fecha = models.DateField()
     horaInicio = models.TimeField()
     horaFin = models.TimeField()
     estudiantes = models.ManyToManyField(
-        Alumno
+        Alumno,
+        through="AsistenciaEstudiante",
     )
+
+class AsistenciaEstudiante(models.Model):
+    asistencia = models.ForeignKey(Asistencia, on_delete=models.CASCADE)
+    estudiante = models.ForeignKey(Alumno, on_delete=models.CASCADE)
+    presente = models.BooleanField(default=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["asistencia", "estudiante"],
+                name="unique_asistencia_estudiante",
+            )
+        ]
