@@ -1,5 +1,5 @@
-from .models import Alumno, Asignatura
-from .serializers import AlumnoSerializer, AsignaturaSerializer
+from .models import Alumno, Asignatura, Asistencia
+from .serializers import AlumnoSerializer, AsignaturaSerializer, AsistenciaSerializer
 from rest_framework import viewsets
 
 # Create your views here.
@@ -10,3 +10,7 @@ class AlumnoViewSet(viewsets.ModelViewSet):
 class AsignaturaViewSet(viewsets.ModelViewSet):
     queryset = Asignatura.objects.all()
     serializer_class = AsignaturaSerializer
+
+class AsistenciaViewSet(viewsets.ModelViewSet):
+    queryset = Asistencia.objects.all()
+    serializer_class = AsistenciaSerializer
