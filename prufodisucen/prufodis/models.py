@@ -22,3 +22,13 @@ class Asignatura(models.Model):
     estudiantes = models.ManyToManyField(
         Alumno
     )
+
+class Asistencia(models.Model):
+    asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE)
+    nombreAsignatura = models.CharField(max_length=100)
+    fecha = models.DateField()
+    horaInicio = models.TimeField()
+    horaFin = models.TimeField()
+    estudiantes = models.ManyToManyField(
+        Alumno
+    )
