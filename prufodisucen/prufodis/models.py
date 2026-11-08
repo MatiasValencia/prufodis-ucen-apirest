@@ -14,3 +14,9 @@ class Alumno(models.Model):
         blank=True,
         validators=[FileExtensionValidator(allowed_extensions=["jpg", "png"])],
     )
+
+class Asignatura(models.Model):
+    nombre = models.CharField(max_length=100)
+    cantidadNotas = models.IntegerField()
+    porcentajeNotas = models.JSONField(default=list)
+    estudiantes = models.JSONField(default=list)
