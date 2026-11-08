@@ -25,7 +25,6 @@ class Asignatura(models.Model):
 
 class Asistencia(models.Model):
     asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE)
-    nombreAsignatura = models.CharField(max_length=100)
     fecha = models.DateField()
     horaInicio = models.TimeField()
     horaFin = models.TimeField()
