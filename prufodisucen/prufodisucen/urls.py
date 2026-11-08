@@ -15,11 +15,12 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from rest_framework.routers import DefaultRouter
-from prufodis.views import AlumnoViewSet, AsignaturaViewSet, AsistenciaViewSet
+from prufodis.views import *
 
 router = DefaultRouter()
 router.register('alumnos', AlumnoViewSet)
 router.register('asignaturas', AsignaturaViewSet)
 router.register('asistencia', AsistenciaViewSet)
+router.register('asistencia-estudiante', AsistenciaEstudianteViewSet)
 
 urlpatterns = router.urls
