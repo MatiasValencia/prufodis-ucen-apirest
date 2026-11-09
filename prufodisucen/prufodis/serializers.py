@@ -20,3 +20,8 @@ class AsistenciaEstudianteSerializer(serializers.ModelSerializer):
     class Meta:
         model = AsistenciaEstudiante
         fields = '__all__'
+
+class HabilidadesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Habilidades
+        fields = '__all__'
