@@ -25,3 +25,8 @@ class HabilidadesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Habilidades
         fields = '__all__'
+
+class EvaluacionesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Evaluaciones
+        fields = '__all__'
