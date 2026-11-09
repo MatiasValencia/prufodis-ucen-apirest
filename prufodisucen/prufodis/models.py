@@ -50,3 +50,8 @@ class Habilidades(models.Model):
     nombreHabilidad = models.CharField(max_length=100)
     descripcion = models.TextField()
     estudiante = models.ForeignKey(Alumno, on_delete=models.CASCADE)
+
+class Evaluaciones(models.Model):
+    asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE)
+    estudiante = models.ForeignKey(Alumno, on_delete=models.CASCADE)
+    nota = models.DecimalField(max_digits=2, decimal_places=1)
