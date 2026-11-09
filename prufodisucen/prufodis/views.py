@@ -3,9 +3,9 @@ from .serializers import *
 from rest_framework import viewsets
 
 # Create your views here.
-class AlumnoViewSet(viewsets.ModelViewSet):
-    queryset = Alumno.objects.all()
-    serializer_class = AlumnoSerializer
+class EstudianteViewSet(viewsets.ModelViewSet):
+    queryset = Estudiante.objects.all()
+    serializer_class = EstudianteSerializer
 
 class AsignaturaViewSet(viewsets.ModelViewSet):
     queryset = Asignatura.objects.all()

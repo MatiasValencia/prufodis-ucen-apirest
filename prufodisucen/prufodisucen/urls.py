@@ -18,7 +18,7 @@ from rest_framework.routers import DefaultRouter
 from prufodis.views import *
 
 router = DefaultRouter()
-router.register('alumnos', AlumnoViewSet)
+router.register('estudiantes', EstudianteViewSet)
 router.register('asignaturas', AsignaturaViewSet)
 router.register('asistencia', AsistenciaViewSet)
 router.register('asistencia-estudiante', AsistenciaEstudianteViewSet)

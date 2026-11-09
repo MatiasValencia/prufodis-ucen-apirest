@@ -2,7 +2,7 @@ from django.db import models
 from django.core.validators import FileExtensionValidator
 
 # Create your models here.
-class Alumno(models.Model):
+class Estudiante(models.Model):
     nombres = models.CharField(max_length=100)
     primerApellido = models.CharField(max_length=100)
     segundoApellido = models.CharField(max_length=100)
@@ -10,7 +10,7 @@ class Alumno(models.Model):
     apoderado = models.CharField(max_length=100)
     telefono = models.IntegerField()
     fotografia = models.ImageField(
-        upload_to="alumnos/",
+        upload_to="estudiantes/",
         blank=True,
         validators=[FileExtensionValidator(allowed_extensions=["jpg", "png"])],
     )
@@ -20,7 +20,7 @@ class Asignatura(models.Model):
     cantidadNotas = models.IntegerField()
     porcentajeNotas = models.JSONField(default=list)
     estudiantes = models.ManyToManyField(
-        Alumno
+        Estudiante
     )
 
 class Asistencia(models.Model):
@@ -29,13 +29,13 @@ class Asistencia(models.Model):
     horaInicio = models.TimeField()
     horaFin = models.TimeField()
     estudiantes = models.ManyToManyField(
-        Alumno,
+        Estudiante,
         through="AsistenciaEstudiante",
     )
 
 class AsistenciaEstudiante(models.Model):
     asistencia = models.ForeignKey(Asistencia, on_delete=models.CASCADE)
-    estudiante = models.ForeignKey(Alumno, on_delete=models.CASCADE)
+    estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE)
     presente = models.BooleanField(default=False)
 
     class Meta:
@@ -49,9 +49,9 @@ class AsistenciaEstudiante(models.Model):
 class Habilidades(models.Model):
     nombreHabilidad = models.CharField(max_length=100)
     descripcion = models.TextField()
-    estudiante = models.ForeignKey(Alumno, on_delete=models.CASCADE)
+    estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE)
 
 class Evaluaciones(models.Model):
     asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE)
-    estudiante = models.ForeignKey(Alumno, on_delete=models.CASCADE)
+    estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE)
     nota = models.DecimalField(max_digits=2, decimal_places=1)
