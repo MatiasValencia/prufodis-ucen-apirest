@@ -45,3 +45,8 @@ class AsistenciaEstudiante(models.Model):
                 name="unique_asistencia_estudiante",
             )
         ]
+
+class Habilidades(models.Model):
+    nombreHabilidad = models.CharField(max_length=100)
+    descripcion = models.TextField()
+    estudiante = models.ForeignKey(Alumno, on_delete=models.CASCADE)
