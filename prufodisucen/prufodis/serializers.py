@@ -88,6 +88,11 @@ class TipoCompetenciaSerializer(serializers.ModelSerializer):
         model = TipoCompetencia
         fields = '__all__'
 
+class CompetenciaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Competencia
+        fields = '__all__'
+
 class EvaluacionesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Evaluaciones

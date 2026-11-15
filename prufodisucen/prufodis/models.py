@@ -165,6 +165,12 @@ class AsistenciaEstudiante(models.Model):
 class TipoCompetencia(models.Model):
     nombreTipoCompetencia = models.CharField(max_length=100)
 
+class Competencia(models.Model):
+    nombreCompetencia = models.CharField(max_length=100)
+    tipoCompetencia = models.ForeignKey(TipoCompetencia, on_delete=models.CASCADE)
+    estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE)
+    descripcion = models.TextField()
+
 class Evaluaciones(models.Model):
     asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE)
     estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE)

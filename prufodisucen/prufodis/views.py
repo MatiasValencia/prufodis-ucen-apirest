@@ -23,6 +23,10 @@ class TipoCompetenciaViewSet(viewsets.ModelViewSet):
     queryset = TipoCompetencia.objects.all()
     serializer_class = TipoCompetenciaSerializer
 
+class CompetenciaViewSet(viewsets.ModelViewSet):
+    queryset = Competencia.objects.all()
+    serializer_class = CompetenciaSerializer
+
 class EvaluacionesViewSet(viewsets.ModelViewSet):
     queryset = Evaluaciones.objects.all()
     serializer_class = EvaluacionesSerializer
