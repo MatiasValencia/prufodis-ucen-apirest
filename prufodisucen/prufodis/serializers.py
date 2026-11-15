@@ -5,6 +5,23 @@ class EstudianteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Estudiante
         fields = '__all__'
+        extra_kwargs = {
+            field: {
+                "error_messages": {
+                    "blank": REQUIRED_FIELD_ERROR,
+                    "null": REQUIRED_FIELD_ERROR,
+                    "required": REQUIRED_FIELD_ERROR,
+                }
+            }
+            for field in (
+                "nombres",
+                "primerApellido",
+                "segundoApellido",
+                "rut",
+                "apoderado",
+                "telefono",
+            )
+        }
 
 class AsignaturaSerializer(serializers.ModelSerializer):
     class Meta:

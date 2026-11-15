@@ -1,14 +1,69 @@
 from django.db import models
-from django.core.validators import FileExtensionValidator
+from django.core.validators import FileExtensionValidator, RegexValidator
 
 # Create your models here.
+REQUIRED_FIELD_ERROR = "Favor de rellenar todos los campos del formulario."
+
+
 class Estudiante(models.Model):
-    nombres = models.CharField(max_length=100)
-    primerApellido = models.CharField(max_length=100)
-    segundoApellido = models.CharField(max_length=100)
-    rut = models.CharField(max_length=10)
-    apoderado = models.CharField(max_length=100)
-    telefono = models.IntegerField()
+    nombres = models.CharField(
+        max_length=100,
+        error_messages={
+            "blank": REQUIRED_FIELD_ERROR,
+            "null": REQUIRED_FIELD_ERROR,
+        },
+    )
+    primerApellido = models.CharField(
+        max_length=100,
+        error_messages={
+            "blank": REQUIRED_FIELD_ERROR,
+            "null": REQUIRED_FIELD_ERROR,
+        },
+    )
+    segundoApellido = models.CharField(
+        max_length=100,
+        error_messages={
+            "blank": REQUIRED_FIELD_ERROR,
+            "null": REQUIRED_FIELD_ERROR,
+        },
+    )
+    rut = models.CharField(
+        max_length=10,
+        unique=True,
+        validators=[
+            RegexValidator(
+                regex=r"^[0-9]{7,8}-[0-9K]\Z",
+                message="Ingrese un RUT válido.",
+            )
+        ],
+        error_messages={
+            "blank": REQUIRED_FIELD_ERROR,
+            "null": REQUIRED_FIELD_ERROR,
+            "unique": "Este RUT ya está registrado.",
+        },
+    )
+    apoderado = models.CharField(
+        max_length=100,
+        error_messages={
+            "blank": REQUIRED_FIELD_ERROR,
+            "null": REQUIRED_FIELD_ERROR,
+        },
+    )
+    telefono = models.CharField(
+        max_length=9,
+        unique=True,
+        validators=[
+            RegexValidator(
+                regex=r"^[0-9]{9}\Z",
+                message="Inserte un número de teléfono de 9 dígitos.",
+            )
+        ],
+        error_messages={
+            "blank": REQUIRED_FIELD_ERROR,
+            "null": REQUIRED_FIELD_ERROR,
+            "unique": "Este teléfono ya está registrado.",
+        },
+    )
     fotografia = models.ImageField(
         upload_to="estudiantes/",
         blank=True,
