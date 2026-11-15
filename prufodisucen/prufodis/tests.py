@@ -1,8 +1,12 @@
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from .models import Asignatura, Estudiante, REQUIRED_FIELD_ERROR
-from .serializers import AsignaturaSerializer, EstudianteSerializer
+from .models import Asignatura, Asistencia, Estudiante, REQUIRED_FIELD_ERROR
+from .serializers import (
+    AsignaturaSerializer,
+    AsistenciaSerializer,
+    EstudianteSerializer,
+)
 
 
 class EstudianteValidationTests(TestCase):
@@ -199,3 +203,52 @@ class AsignaturaValidationTests(TestCase):
         self.assertTrue(serializer.is_valid(), serializer.errors)
         asignatura = serializer.save()
         self.assertEqual(list(asignatura.estudiantes.all()), [estudiante])
+
+
+class AsistenciaValidationTests(TestCase):
+    def setUp(self):
+        self.asignatura = Asignatura.objects.create(
+            nombre="Matemáticas",
+            cantidadNotas=1,
+            porcentajeNotas=[100],
+        )
+
+    def test_end_time_must_be_later_than_start_time(self):
+        for hora_fin in ("08:00:00", "09:00:00"):
+            with self.subTest(hora_fin=hora_fin):
+                asistencia = Asistencia(
+                    asignatura=self.asignatura,
+                    fecha="2026-11-15",
+                    horaInicio="09:00:00",
+                    horaFin=hora_fin,
+                )
+
+                with self.assertRaises(ValidationError) as error:
+                    asistencia.full_clean()
+
+                self.assertEqual(
+                    error.exception.message_dict["horaFin"],
+                    [
+                        "La hora de fin de la clase debe ser mayor a la hora de inicio"
+                    ],
+                )
+
+    def test_serializer_accepts_later_end_time_and_rejects_earlier_end_time(self):
+        data = {
+            "asignatura": self.asignatura.pk,
+            "fecha": "2026-11-15",
+            "horaInicio": "09:00:00",
+            "horaFin": "10:00:00",
+        }
+        serializer = AsistenciaSerializer(data=data)
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+        data["horaFin"] = "08:00:00"
+        serializer = AsistenciaSerializer(data=data)
+
+        self.assertFalse(serializer.is_valid())
+        self.assertEqual(
+            str(serializer.errors["horaFin"][0]),
+            "La hora de fin de la clase debe ser mayor a la hora de inicio",
+        )

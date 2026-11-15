@@ -65,6 +65,19 @@ class AsistenciaSerializer(serializers.ModelSerializer):
         model = Asistencia
         fields = '__all__'
 
+    def validate(self, attrs):
+        asistencia = self.instance or Asistencia()
+        for campo in ("horaInicio", "horaFin"):
+            if campo in attrs:
+                setattr(asistencia, campo, attrs[campo])
+
+        try:
+            asistencia.clean()
+        except DjangoValidationError as error:
+            raise serializers.ValidationError(error.message_dict) from error
+
+        return attrs
+
 class AsistenciaEstudianteSerializer(serializers.ModelSerializer):
     class Meta:
         model = AsistenciaEstudiante

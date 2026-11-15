@@ -135,6 +135,20 @@ class Asistencia(models.Model):
         through="AsistenciaEstudiante",
     )
 
+    def clean(self):
+        super().clean()
+
+        if (
+            self.horaInicio is not None
+            and self.horaFin is not None
+            and self.horaFin <= self.horaInicio
+        ):
+            raise ValidationError({
+                "horaFin": (
+                    "La hora de fin de la clase debe ser mayor a la hora de inicio"
+                )
+            })
+
 class AsistenciaEstudiante(models.Model):
     asistencia = models.ForeignKey(Asistencia, on_delete=models.CASCADE)
     estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE)
