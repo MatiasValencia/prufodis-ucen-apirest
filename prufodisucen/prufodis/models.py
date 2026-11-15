@@ -1,3 +1,6 @@
+from decimal import Decimal
+
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.core.validators import FileExtensionValidator, RegexValidator
 
@@ -77,6 +80,50 @@ class Asignatura(models.Model):
     estudiantes = models.ManyToManyField(
         Estudiante
     )
+
+    def clean(self):
+        super().clean()
+
+        if (
+            not isinstance(self.cantidadNotas, int)
+            or isinstance(self.cantidadNotas, bool)
+            or self.cantidadNotas <= 0
+        ):
+            raise ValidationError({
+                "cantidadNotas": "Ingrese una cantidad válida de notas, mayor a 0"
+            })
+
+        porcentajes = self.porcentajeNotas
+        es_lista_numerica = isinstance(porcentajes, list) and all(
+            isinstance(porcentaje, (int, float))
+            and not isinstance(porcentaje, bool)
+            for porcentaje in porcentajes
+        )
+        total_es_100 = es_lista_numerica and sum(
+            (Decimal(str(porcentaje)) for porcentaje in porcentajes),
+            Decimal("0"),
+        ) == Decimal("100")
+        cantidad_coincide = (
+            isinstance(porcentajes, list)
+            and len(porcentajes) == self.cantidadNotas
+        )
+
+        if not cantidad_coincide and not total_es_100:
+            mensaje = (
+                "La cantidad de porcentajes y cantidad de notas deben coincidir, "
+                "y también deben sumar 100."
+            )
+        elif not cantidad_coincide:
+            mensaje = (
+                "La cantidad de porcentajes debe ser la misma cantidad de notas "
+                "de la asignatura."
+            )
+        elif not total_es_100:
+            mensaje = "El total de los porcentajes debe ser 100."
+        else:
+            return
+
+        raise ValidationError({"porcentajeNotas": mensaje})
 
 class Asistencia(models.Model):
     asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE)

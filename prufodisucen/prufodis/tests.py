@@ -1,8 +1,8 @@
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from .models import Estudiante, REQUIRED_FIELD_ERROR
-from .serializers import EstudianteSerializer
+from .models import Asignatura, Estudiante, REQUIRED_FIELD_ERROR
+from .serializers import AsignaturaSerializer, EstudianteSerializer
 
 
 class EstudianteValidationTests(TestCase):
@@ -120,3 +120,82 @@ class EstudianteValidationTests(TestCase):
             str(serializer.errors["telefono"][0]),
             "Este teléfono ya está registrado.",
         )
+
+
+class AsignaturaValidationTests(TestCase):
+    def asignatura(self, **overrides):
+        data = {
+            "nombre": "Matemáticas",
+            "cantidadNotas": 3,
+            "porcentajeNotas": [30, 30, 40],
+        }
+        data.update(overrides)
+        return Asignatura(**data)
+
+    def test_cantidad_notas_must_be_greater_than_zero(self):
+        asignatura = self.asignatura(cantidadNotas=0)
+
+        with self.assertRaises(ValidationError) as error:
+            asignatura.full_clean()
+
+        self.assertEqual(
+            error.exception.message_dict["cantidadNotas"],
+            ["Ingrese una cantidad válida de notas, mayor a 0"],
+        )
+
+    def test_porcentajes_report_each_invalid_combination(self):
+        cases = (
+            (
+                {"cantidadNotas": 2, "porcentajeNotas": [50, 50, 0]},
+                "La cantidad de porcentajes debe ser la misma cantidad de notas "
+                "de la asignatura.",
+            ),
+            (
+                {"cantidadNotas": 2, "porcentajeNotas": [40, 40]},
+                "El total de los porcentajes debe ser 100.",
+            ),
+            (
+                {"cantidadNotas": 3, "porcentajeNotas": [20, 20]},
+                "La cantidad de porcentajes y cantidad de notas deben coincidir, "
+                "y también deben sumar 100.",
+            ),
+        )
+
+        for overrides, mensaje in cases:
+            with self.subTest(overrides=overrides):
+                with self.assertRaises(ValidationError) as error:
+                    self.asignatura(**overrides).full_clean()
+
+                self.assertEqual(
+                    error.exception.message_dict["porcentajeNotas"],
+                    [mensaje],
+                )
+
+    def test_serializer_requires_students_and_preserves_many_to_many_relation(self):
+        estudiante = Estudiante.objects.create(
+            nombres="Ana",
+            primerApellido="Pérez",
+            segundoApellido="González",
+            rut="1234567-K",
+            apoderado="María Pérez",
+            telefono="912345678",
+        )
+        data = {
+            "nombre": "Matemáticas",
+            "cantidadNotas": 3,
+            "porcentajeNotas": [30, 30, 40],
+            "estudiantes": [],
+        }
+        serializer = AsignaturaSerializer(data=data)
+
+        self.assertFalse(serializer.is_valid())
+        self.assertEqual(
+            str(serializer.errors["estudiantes"][0]),
+            "La asignatura debe tener al menos un estudiante.",
+        )
+
+        data["estudiantes"] = [estudiante.pk]
+        serializer = AsignaturaSerializer(data=data)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        asignatura = serializer.save()
+        self.assertEqual(list(asignatura.estudiantes.all()), [estudiante])
