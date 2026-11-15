@@ -22,7 +22,7 @@ router.register('estudiantes', EstudianteViewSet)
 router.register('asignaturas', AsignaturaViewSet)
 router.register('asistencia', AsistenciaViewSet)
 router.register('asistencia-estudiante', AsistenciaEstudianteViewSet)
-router.register('habilidades', HabilidadesViewSet)
+router.register('tipo-competencias', TipoCompetenciaViewSet)
 router.register('evaluaciones', EvaluacionesViewSet)
 
 urlpatterns = router.urls

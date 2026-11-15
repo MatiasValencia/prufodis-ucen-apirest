@@ -83,9 +83,9 @@ class AsistenciaEstudianteSerializer(serializers.ModelSerializer):
         model = AsistenciaEstudiante
         fields = '__all__'
 
-class HabilidadesSerializer(serializers.ModelSerializer):
+class TipoCompetenciaSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Habilidades
+        model = TipoCompetencia
         fields = '__all__'
 
 class EvaluacionesSerializer(serializers.ModelSerializer):

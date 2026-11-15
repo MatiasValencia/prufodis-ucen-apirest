@@ -19,9 +19,9 @@ class AsistenciaEstudianteViewSet(viewsets.ModelViewSet):
     queryset = AsistenciaEstudiante.objects.all()
     serializer_class = AsistenciaEstudianteSerializer
 
-class HabilidadesViewSet(viewsets.ModelViewSet):
-    queryset = Habilidades.objects.all()
-    serializer_class = HabilidadesSerializer
+class TipoCompetenciaViewSet(viewsets.ModelViewSet):
+    queryset = TipoCompetencia.objects.all()
+    serializer_class = TipoCompetenciaSerializer
 
 class EvaluacionesViewSet(viewsets.ModelViewSet):
     queryset = Evaluaciones.objects.all()
