@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'prufodis',
+    'prufodis_usuarios'
     'rest_framework'
 ]
 
