@@ -24,6 +24,13 @@ class EstudianteSerializer(serializers.ModelSerializer):
             )
         }
 
+
+class DocumentoEstudianteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DocumentoEstudiante
+        fields = "__all__"
+
+
 class AsignaturaSerializer(serializers.ModelSerializer):
     estudiantes = serializers.PrimaryKeyRelatedField(
         many=True,

@@ -73,6 +73,38 @@ class Estudiante(models.Model):
         validators=[FileExtensionValidator(allowed_extensions=["jpg", "png"])],
     )
 
+
+class DocumentoEstudiante(models.Model):
+    estudiante = models.ForeignKey(
+        Estudiante,
+        on_delete=models.CASCADE,
+        related_name="documentos",
+    )
+    archivo = models.FileField(
+        upload_to="antecedentes_estudiantes/",
+        validators=[
+            FileExtensionValidator(
+                allowed_extensions=[
+                    "pdf",
+                    "doc",
+                    "docx",
+                    "xls",
+                    "xlsx",
+                    "ppt",
+                    "pptx",
+                    "odt",
+                    "ods",
+                    "odp",
+                    "rtf",
+                    "txt",
+                    "csv",
+                ]
+            )
+        ],
+    )
+    fechaSubida = models.DateTimeField(auto_now_add=True)
+
+
 class Asignatura(models.Model):
     nombre = models.CharField(max_length=100)
     cantidadNotas = models.IntegerField()

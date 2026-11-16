@@ -1,11 +1,35 @@
 from .models import *
 from .serializers import *
 from rest_framework import viewsets
+from rest_framework.exceptions import ValidationError as APIValidationError
+from rest_framework.parsers import FormParser, MultiPartParser
 
 # Create your views here.
 class EstudianteViewSet(viewsets.ModelViewSet):
     queryset = Estudiante.objects.all()
     serializer_class = EstudianteSerializer
+
+
+class DocumentoEstudianteViewSet(viewsets.ModelViewSet):
+    queryset = DocumentoEstudiante.objects.all()
+    serializer_class = DocumentoEstudianteSerializer
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        estudiante_id = self.request.query_params.get("estudiante")
+        if estudiante_id is None:
+            return queryset
+
+        try:
+            estudiante_id = int(estudiante_id)
+        except ValueError as error:
+            raise APIValidationError({
+                "estudiante": "Debe ser un identificador válido."
+            }) from error
+
+        return queryset.filter(estudiante_id=estudiante_id)
+
 
 class AsignaturaViewSet(viewsets.ModelViewSet):
     queryset = Asignatura.objects.all()

@@ -1,9 +1,14 @@
+import tempfile
+
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase, override_settings
+from rest_framework.test import APIClient
 
 from .models import (
     Asignatura,
     Asistencia,
+    DocumentoEstudiante,
     Estudiante,
     Evaluaciones,
     REQUIRED_FIELD_ERROR,
@@ -11,6 +16,7 @@ from .models import (
 from .serializers import (
     AsignaturaSerializer,
     AsistenciaSerializer,
+    DocumentoEstudianteSerializer,
     EstudianteSerializer,
     EvaluacionesSerializer,
 )
@@ -131,6 +137,58 @@ class EstudianteValidationTests(TestCase):
             str(serializer.errors["telefono"][0]),
             "Este teléfono ya está registrado.",
         )
+
+
+class DocumentoEstudianteTests(TestCase):
+    def setUp(self):
+        self.estudiante = Estudiante.objects.create(
+            nombres="Ana",
+            primerApellido="Pérez",
+            segundoApellido="González",
+            rut="1234567-K",
+            apoderado="María Pérez",
+            telefono="912345678",
+        )
+
+    def test_api_uploads_document_linked_to_student(self):
+        with tempfile.TemporaryDirectory() as media_root:
+            with override_settings(MEDIA_ROOT=media_root):
+                response = APIClient().post(
+                    "/documentos-estudiante/",
+                    {
+                        "estudiante": self.estudiante.pk,
+                        "archivo": SimpleUploadedFile(
+                            "informe.pdf",
+                            b"contenido del informe",
+                            content_type="application/pdf",
+                        ),
+                    },
+                    format="multipart",
+                )
+
+                self.assertEqual(response.status_code, 201, response.data)
+                documento = DocumentoEstudiante.objects.get(pk=response.data["id"])
+                self.assertEqual(documento.estudiante, self.estudiante)
+                self.assertTrue(documento.archivo.storage.exists(documento.archivo.name))
+                self.assertEqual(response.data["archivo"].split("/")[-1], "informe.pdf")
+
+                listado = APIClient().get(
+                    "/documentos-estudiante/",
+                    {"estudiante": self.estudiante.pk},
+                )
+                self.assertEqual(listado.status_code, 200)
+                self.assertEqual([item["id"] for item in listado.data], [documento.pk])
+
+    def test_serializer_rejects_unsupported_file_extensions(self):
+        serializer = DocumentoEstudianteSerializer(
+            data={
+                "estudiante": self.estudiante.pk,
+                "archivo": SimpleUploadedFile("programa.exe", b"no permitido"),
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("archivo", serializer.errors)
 
 
 class AsignaturaValidationTests(TestCase):
