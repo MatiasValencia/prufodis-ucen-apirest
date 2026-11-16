@@ -10,10 +10,13 @@ from prufodis_usuarios.models import Usuario
 from .models import (
     Asignatura,
     Asistencia,
+    AsistenciaEstudiante,
+    Competencia,
     DocumentoEstudiante,
     Estudiante,
     Evaluaciones,
     REQUIRED_FIELD_ERROR,
+    TipoCompetencia,
 )
 from .serializers import (
     AsignaturaSerializer,
@@ -199,6 +202,216 @@ class DocumentoEstudianteTests(TestCase):
 
         self.assertFalse(serializer.is_valid())
         self.assertIn("archivo", serializer.errors)
+
+
+class RolPermissionsTests(TestCase):
+    def setUp(self):
+        self.estudiante = Estudiante.objects.create(
+            nombres="Ana",
+            primerApellido="Pérez",
+            segundoApellido="González",
+            rut="1234567-K",
+            apoderado="María Pérez",
+            telefono="912345678",
+        )
+        self.otro_estudiante = Estudiante.objects.create(
+            nombres="Luis",
+            primerApellido="Soto",
+            segundoApellido="Díaz",
+            rut="12345678-9",
+            apoderado="Juan Soto",
+            telefono="912345679",
+        )
+        self.asignatura = Asignatura.objects.create(
+            nombre="Matemáticas",
+            cantidadNotas=2,
+            porcentajeNotas=[50, 50],
+        )
+        self.asignatura.estudiantes.add(self.estudiante)
+        self.otra_asignatura = Asignatura.objects.create(
+            nombre="Historia",
+            cantidadNotas=2,
+            porcentajeNotas=[50, 50],
+        )
+        self.otra_asignatura.estudiantes.add(self.otro_estudiante)
+        self.perfiles = {}
+        for rol in Usuario.Rol.values:
+            user = get_user_model().objects.create_user(
+                username=rol,
+                password="test-password",
+            )
+            perfil = Usuario.objects.create(
+                usuario=user,
+                rol=rol,
+                asignatura=(
+                    self.asignatura if rol == Usuario.Rol.PROFESOR else None
+                ),
+            )
+            self.perfiles[rol] = perfil
+
+    def client_for(self, rol):
+        client = APIClient()
+        client.force_authenticate(user=self.perfiles[rol].usuario)
+        return client
+
+    def assert_forbidden(self, response):
+        self.assertEqual(response.status_code, 403, response.data)
+        self.assertEqual(
+            response.data["detail"],
+            "Usted no tiene los permisos para realizar esta tarea",
+        )
+
+    def test_roles_can_only_access_their_allowed_crud_resources(self):
+        cases = (
+            (
+                Usuario.Rol.ADMINISTRADOR,
+                ("/estudiantes/", "/asignaturas/"),
+                (
+                    "/documentos-estudiante/",
+                    "/documentos-asignatura/",
+                    "/asistencia/",
+                    "/asistencia-estudiante/",
+                    "/tipo-competencias/",
+                    "/competencias/",
+                    "/evaluaciones/",
+                    "/usuarios/",
+                ),
+            ),
+            (
+                Usuario.Rol.PROFESOR,
+                (
+                    "/asistencia/",
+                    "/asistencia-estudiante/",
+                    "/evaluaciones/",
+                    "/documentos-asignatura/",
+                ),
+                (
+                    "/estudiantes/",
+                    "/documentos-estudiante/",
+                    "/asignaturas/",
+                    "/tipo-competencias/",
+                    "/competencias/",
+                    "/usuarios/",
+                ),
+            ),
+            (
+                Usuario.Rol.PSICOLOGO,
+                ("/documentos-estudiante/", "/competencias/"),
+                (
+                    "/estudiantes/",
+                    "/documentos-asignatura/",
+                    "/asignaturas/",
+                    "/asistencia/",
+                    "/asistencia-estudiante/",
+                    "/tipo-competencias/",
+                    "/evaluaciones/",
+                    "/usuarios/",
+                ),
+            ),
+        )
+
+        for rol, permitidas, denegadas in cases:
+            client = self.client_for(rol)
+            for path in permitidas:
+                with self.subTest(rol=rol, path=path):
+                    self.assertEqual(client.get(path).status_code, 200)
+            for path in denegadas:
+                with self.subTest(rol=rol, path=path):
+                    self.assert_forbidden(client.get(path))
+
+    def test_professor_can_only_read_and_write_assigned_subject_records(self):
+        cliente = self.client_for(Usuario.Rol.PROFESOR)
+        asistencia_otra_asignatura = Asistencia.objects.create(
+            asignatura=self.otra_asignatura,
+            fecha="2026-11-15",
+            horaInicio="09:00:00",
+            horaFin="10:00:00",
+        )
+        response = cliente.get("/asistencia/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, [])
+        self.assert_forbidden(
+            cliente.get(f"/asistencia/{asistencia_otra_asignatura.pk}/")
+        )
+
+        response = cliente.post(
+            "/asistencia/",
+            {
+                "asignatura": self.asignatura.pk,
+                "fecha": "2026-11-16",
+                "horaInicio": "09:00:00",
+                "horaFin": "10:00:00",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201, response.data)
+        asistencia = Asistencia.objects.get(pk=response.data["id"])
+
+        response = cliente.post(
+            "/asistencia-estudiante/",
+            {
+                "asistencia": asistencia.pk,
+                "estudiante": self.otro_estudiante.pk,
+                "presente": True,
+            },
+            format="json",
+        )
+        self.assert_forbidden(response)
+        self.assertFalse(AsistenciaEstudiante.objects.exists())
+
+        for asignatura, estudiante in (
+            (self.asignatura, self.otro_estudiante),
+            (self.otra_asignatura, self.otro_estudiante),
+        ):
+            response = cliente.post(
+                "/evaluaciones/",
+                {
+                    "asignatura": asignatura.pk,
+                    "estudiante": estudiante.pk,
+                    "nota": "6.0",
+                },
+                format="json",
+            )
+            self.assert_forbidden(response)
+        self.assertFalse(Evaluaciones.objects.exists())
+
+        response = cliente.post(
+            "/evaluaciones/",
+            {
+                "asignatura": self.asignatura.pk,
+                "estudiante": self.estudiante.pk,
+                "nota": "6.0",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201, response.data)
+
+    def test_psychologist_can_create_competencies_and_admin_cannot_manage_users(self):
+        cliente = self.client_for(Usuario.Rol.PSICOLOGO)
+        tipo = TipoCompetencia.objects.create(nombreTipoCompetencia="Social")
+        response = cliente.post(
+            "/competencias/",
+            {
+                "nombreCompetencia": "Trabajo en equipo",
+                "tipoCompetencia": tipo.pk,
+                "estudiante": self.estudiante.pk,
+                "descripcion": "Colabora con sus compañeros",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201, response.data)
+        self.assertTrue(Competencia.objects.filter(pk=response.data["id"]).exists())
+
+        for rol in Usuario.Rol.values:
+            with self.subTest(rol=rol):
+                self.assert_forbidden(self.client_for(rol).get("/usuarios/"))
+
+    def test_authenticated_user_without_role_is_denied(self):
+        usuario = get_user_model().objects.create_user(username="sin-rol")
+        client = APIClient()
+        client.force_authenticate(user=usuario)
+
+        self.assert_forbidden(client.get("/estudiantes/"))
 
 
 class AsignaturaValidationTests(TestCase):

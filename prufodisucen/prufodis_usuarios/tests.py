@@ -64,29 +64,11 @@ class UsuarioTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("usuarios", response.data)
         response = client.get("/usuarios/")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data[0]["id"], perfil.pk)
-
-        profesor = get_user_model().objects.create_user(username="profesor")
-        response = client.post(
-            "/usuarios/",
-            {"usuario": profesor.pk, "rol": "profesor"},
-            format="json",
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.data["detail"],
+            "Usted no tiene los permisos para realizar esta tarea",
         )
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("asignatura", response.data)
-
-        response = client.post(
-            "/usuarios/",
-            {
-                "usuario": profesor.pk,
-                "rol": "profesor",
-                "asignatura": self.asignatura.pk,
-            },
-            format="json",
-        )
-        self.assertEqual(response.status_code, 201, response.data)
-        self.assertEqual(response.data["asignatura"], self.asignatura.pk)
 
     def test_admin_can_open_user_creation_form_with_role_and_assignment(self):
         admin = get_user_model().objects.create_superuser(
