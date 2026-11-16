@@ -2,9 +2,11 @@ import tempfile
 
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
+from prufodis_usuarios.models import Usuario
 from .models import (
     Asignatura,
     Asistencia,
@@ -141,6 +143,14 @@ class EstudianteValidationTests(TestCase):
 
 class DocumentoEstudianteTests(TestCase):
     def setUp(self):
+        usuario = get_user_model().objects.create_user(
+            username="psicologo",
+            password="test-password",
+            email="psicologo@example.com",
+        )
+        Usuario.objects.create(usuario=usuario, rol="psicologo")
+        self.client = APIClient()
+        self.client.force_authenticate(user=usuario)
         self.estudiante = Estudiante.objects.create(
             nombres="Ana",
             primerApellido="Pérez",
@@ -153,7 +163,7 @@ class DocumentoEstudianteTests(TestCase):
     def test_api_uploads_document_linked_to_student(self):
         with tempfile.TemporaryDirectory() as media_root:
             with override_settings(MEDIA_ROOT=media_root):
-                response = APIClient().post(
+                response = self.client.post(
                     "/documentos-estudiante/",
                     {
                         "estudiante": self.estudiante.pk,
@@ -172,7 +182,7 @@ class DocumentoEstudianteTests(TestCase):
                 self.assertTrue(documento.archivo.storage.exists(documento.archivo.name))
                 self.assertEqual(response.data["archivo"].split("/")[-1], "informe.pdf")
 
-                listado = APIClient().get(
+                listado = self.client.get(
                     "/documentos-estudiante/",
                     {"estudiante": self.estudiante.pk},
                 )
