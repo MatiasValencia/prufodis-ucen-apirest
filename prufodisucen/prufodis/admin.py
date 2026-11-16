@@ -5,6 +5,7 @@ from .models import *
 admin.site.register(Estudiante)
 admin.site.register(DocumentoEstudiante)
 admin.site.register(Asignatura)
+admin.site.register(DocumentoAsignatura)
 admin.site.register(Asistencia)
 admin.site.register(AsistenciaEstudiante)
 admin.site.register(TipoCompetencia)

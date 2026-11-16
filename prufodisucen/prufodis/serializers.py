@@ -67,6 +67,11 @@ class AsignaturaSerializer(serializers.ModelSerializer):
 
         return attrs
 
+class DocumentoAsignaturaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DocumentoAsignatura
+        fields = "__all__"
+
 class AsistenciaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asistencia

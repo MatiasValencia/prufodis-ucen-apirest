@@ -157,6 +157,36 @@ class Asignatura(models.Model):
 
         raise ValidationError({"porcentajeNotas": mensaje})
 
+class DocumentoAsignatura(models.Model):
+    asignatura = models.ForeignKey(
+        Asignatura,
+        on_delete=models.CASCADE,
+        related_name="documentos",
+    )
+    archivo = models.FileField(
+        upload_to="recursos_asignatura/",
+        validators=[
+            FileExtensionValidator(
+                allowed_extensions=[
+                    "pdf",
+                    "doc",
+                    "docx",
+                    "xls",
+                    "xlsx",
+                    "ppt",
+                    "pptx",
+                    "odt",
+                    "ods",
+                    "odp",
+                    "rtf",
+                    "txt",
+                    "csv",
+                ]
+            )
+        ],
+    )
+    fechaSubida = models.DateTimeField(auto_now_add=True)
+
 class Asistencia(models.Model):
     asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE)
     fecha = models.DateField()

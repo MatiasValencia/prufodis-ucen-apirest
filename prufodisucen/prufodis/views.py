@@ -35,6 +35,27 @@ class AsignaturaViewSet(viewsets.ModelViewSet):
     queryset = Asignatura.objects.all()
     serializer_class = AsignaturaSerializer
 
+class DocumentoAsignaturaViewSet(viewsets.ModelViewSet):
+    queryset = DocumentoAsignatura.objects.all()
+    serializer_class = DocumentoAsignaturaSerializer
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        asignatura_id = self.request.query_params.get("asignatura")
+        if asignatura_id is None:
+            return queryset
+
+        try:
+            asignatura_id = int(asignatura_id)
+        except ValueError as error:
+            raise APIValidationError({
+                "asignatura": "Debe ser un identificador válido."
+            }) from error
+
+        return queryset.filter(asignatura_id=asignatura_id)
+
+
 class AsistenciaViewSet(viewsets.ModelViewSet):
     queryset = Asistencia.objects.all()
     serializer_class = AsistenciaSerializer
