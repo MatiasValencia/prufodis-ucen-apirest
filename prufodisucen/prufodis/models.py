@@ -174,4 +174,37 @@ class Competencia(models.Model):
 class Evaluaciones(models.Model):
     asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE)
     estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE)
-    nota = models.DecimalField(max_digits=2, decimal_places=1)
+    nota = models.DecimalField(max_digits=10, decimal_places=1)
+
+    def clean(self):
+        super().clean()
+
+        if (
+            self.nota is not None
+            and not Decimal("1.0") <= self.nota <= Decimal("7.0")
+        ):
+            raise ValidationError({
+                "nota": "La nota debe ser entre un 1.0 y un 7.0"
+            })
+
+        if self.asignatura_id is None:
+            return
+
+        asignatura_anterior_id = None
+        if not self._state.adding:
+            asignatura_anterior_id = (
+                type(self).objects.filter(pk=self.pk)
+                .values_list("asignatura_id", flat=True)
+                .first()
+            )
+
+        if asignatura_anterior_id == self.asignatura_id:
+            return
+
+        if (
+            type(self).objects.filter(asignatura_id=self.asignatura_id).count()
+            >= self.asignatura.cantidadNotas
+        ):
+            raise ValidationError({
+                "asignatura": "No se pueden agregar más notas"
+            })

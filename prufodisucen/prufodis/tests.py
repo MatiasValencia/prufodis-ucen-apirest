@@ -1,11 +1,18 @@
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from .models import Asignatura, Asistencia, Estudiante, REQUIRED_FIELD_ERROR
+from .models import (
+    Asignatura,
+    Asistencia,
+    Estudiante,
+    Evaluaciones,
+    REQUIRED_FIELD_ERROR,
+)
 from .serializers import (
     AsignaturaSerializer,
     AsistenciaSerializer,
     EstudianteSerializer,
+    EvaluacionesSerializer,
 )
 
 
@@ -252,3 +259,117 @@ class AsistenciaValidationTests(TestCase):
             str(serializer.errors["horaFin"][0]),
             "La hora de fin de la clase debe ser mayor a la hora de inicio",
         )
+
+
+class EvaluacionesValidationTests(TestCase):
+    def setUp(self):
+        self.estudiante = Estudiante.objects.create(
+            nombres="Ana",
+            primerApellido="Pérez",
+            segundoApellido="González",
+            rut="1234567-K",
+            apoderado="María Pérez",
+            telefono="912345678",
+        )
+        self.asignatura = Asignatura.objects.create(
+            nombre="Matemáticas",
+            cantidadNotas=3,
+            porcentajeNotas=[30, 30, 40],
+        )
+
+    def serializer(self, nota, asignatura=None):
+        return EvaluacionesSerializer(data={
+            "asignatura": (asignatura or self.asignatura).pk,
+            "estudiante": self.estudiante.pk,
+            "nota": nota,
+        })
+
+    def test_nota_must_be_between_one_and_seven_inclusive(self):
+        for nota in ("1.0", "7.0"):
+            with self.subTest(nota=nota):
+                serializer = self.serializer(nota)
+                self.assertTrue(serializer.is_valid(), serializer.errors)
+
+        for nota in ("0.0", "0.9", "7.1", "10.0"):
+            with self.subTest(nota=nota):
+                serializer = self.serializer(nota)
+                self.assertFalse(serializer.is_valid())
+                self.assertEqual(
+                    str(serializer.errors["nota"][0]),
+                    "La nota debe ser entre un 1.0 y un 7.0",
+                )
+
+    def test_model_full_clean_rejects_note_outside_range(self):
+        evaluacion = Evaluaciones(
+            asignatura=self.asignatura,
+            estudiante=self.estudiante,
+            nota=10.0,
+        )
+
+        with self.assertRaises(ValidationError) as error:
+            evaluacion.full_clean()
+
+        self.assertEqual(
+            error.exception.message_dict["nota"],
+            ["La nota debe ser entre un 1.0 y un 7.0"],
+        )
+
+    def test_assignment_note_count_is_the_maximum_number_of_evaluations(self):
+        for nota in ("4.0", "5.0", "6.0"):
+            serializer = self.serializer(nota)
+            self.assertTrue(serializer.is_valid(), serializer.errors)
+            serializer.save()
+
+        serializer = self.serializer("7.0")
+        self.assertFalse(serializer.is_valid())
+        self.assertEqual(
+            str(serializer.errors["asignatura"][0]),
+            "No se pueden agregar más notas",
+        )
+
+        otra_asignatura = Asignatura.objects.create(
+            nombre="Historia",
+            cantidadNotas=1,
+            porcentajeNotas=[100],
+        )
+        serializer = self.serializer("7.0", otra_asignatura)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_model_full_clean_rejects_excess_evaluations(self):
+        for nota in ("4.0", "5.0", "6.0"):
+            Evaluaciones.objects.create(
+                asignatura=self.asignatura,
+                estudiante=self.estudiante,
+                nota=nota,
+            )
+
+        evaluacion = Evaluaciones(
+            asignatura=self.asignatura,
+            estudiante=self.estudiante,
+            nota="7.0",
+        )
+        with self.assertRaises(ValidationError) as error:
+            evaluacion.full_clean()
+
+        self.assertEqual(
+            error.exception.message_dict["asignatura"],
+            ["No se pueden agregar más notas"],
+        )
+
+    def test_editing_existing_evaluation_does_not_consume_another_slot(self):
+        evaluacion = Evaluaciones.objects.create(
+            asignatura=self.asignatura,
+            estudiante=self.estudiante,
+            nota="4.0",
+        )
+        for nota in ("5.0", "6.0"):
+            serializer = self.serializer(nota)
+            self.assertTrue(serializer.is_valid(), serializer.errors)
+            serializer.save()
+
+        serializer = EvaluacionesSerializer(
+            evaluacion,
+            data={"nota": "7.0"},
+            partial=True,
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)

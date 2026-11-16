@@ -97,3 +97,16 @@ class EvaluacionesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Evaluaciones
         fields = '__all__'
+
+    def validate(self, attrs):
+        evaluacion = self.instance or Evaluaciones()
+        for campo in ("nota", "asignatura"):
+            if campo in attrs:
+                setattr(evaluacion, campo, attrs[campo])
+
+        try:
+            evaluacion.clean()
+        except DjangoValidationError as error:
+            raise serializers.ValidationError(error.message_dict) from error
+
+        return attrs
