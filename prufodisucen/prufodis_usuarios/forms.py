@@ -4,7 +4,33 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
+from .models import Usuario
+
 UserModel = get_user_model()
+
+
+class UsuarioInlineForm(forms.ModelForm):
+    class Meta:
+        model = Usuario
+        fields = "__all__"
+
+    def clean(self):
+        cleaned_data = super().clean()
+        rol = cleaned_data.get("rol")
+        asignaturas = cleaned_data.get("asignaturas")
+
+        if rol == Usuario.Rol.PROFESOR and not asignaturas:
+            self.add_error(
+                "asignaturas",
+                "Todo profesor debe tener al menos una asignatura asignada.",
+            )
+        elif rol != Usuario.Rol.PROFESOR and asignaturas:
+            self.add_error(
+                "asignaturas",
+                "Solo los profesores pueden tener asignaturas.",
+            )
+
+        return cleaned_data
 
 
 class EmailAuthenticationForm(AuthenticationForm):

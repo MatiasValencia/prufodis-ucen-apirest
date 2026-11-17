@@ -1,7 +1,7 @@
-from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
 from .models import Usuario
+
 
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
@@ -10,13 +10,24 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         perfil = self.instance or Usuario()
-        for campo in ("rol", "asignatura"):
-            if campo in attrs:
-                setattr(perfil, campo, attrs[campo])
+        rol = attrs.get("rol", perfil.rol)
+        if "asignaturas" in attrs:
+            asignaturas = attrs["asignaturas"]
+        elif self.instance is not None and self.instance.pk:
+            asignaturas = self.instance.asignaturas.all()
+        else:
+            asignaturas = ()
 
-        try:
-            perfil.clean()
-        except DjangoValidationError as error:
-            raise serializers.ValidationError(error.message_dict) from error
+        tiene_asignaturas = bool(asignaturas)
+        if rol == Usuario.Rol.PROFESOR and not tiene_asignaturas:
+            raise serializers.ValidationError({
+                "asignaturas": (
+                    "Todo profesor debe tener al menos una asignatura asignada."
+                )
+            })
+        if rol != Usuario.Rol.PROFESOR and tiene_asignaturas:
+            raise serializers.ValidationError({
+                "asignaturas": "Solo los profesores pueden tener asignaturas."
+            })
 
         return attrs

@@ -1,10 +1,11 @@
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
 from django.test import TestCase
 from rest_framework.test import APIClient
 
 from prufodis.models import Asignatura
+from .forms import UsuarioInlineForm
 from .models import Usuario
+from .serializers import UsuarioSerializer
 
 
 class UsuarioTests(TestCase):
@@ -15,7 +16,12 @@ class UsuarioTests(TestCase):
             porcentajeNotas=[100],
         )
 
-    def test_usuario_guarda_rol_y_asignatura_para_profesor(self):
+    def test_usuario_guarda_rol_y_multiple_asignaturas_para_profesor(self):
+        otra_asignatura = Asignatura.objects.create(
+            nombre="Historia",
+            cantidadNotas=1,
+            porcentajeNotas=[100],
+        )
         user = get_user_model().objects.create_user(
             username="profesor",
             password="test-password",
@@ -25,22 +31,62 @@ class UsuarioTests(TestCase):
         perfil = Usuario.objects.create(
             usuario=user,
             rol="profesor",
-            asignatura=self.asignatura,
         )
+        perfil.asignaturas.add(self.asignatura, otra_asignatura)
 
         self.assertEqual(perfil.rol, "profesor")
-        self.assertEqual(perfil.asignatura, self.asignatura)
+        self.assertEqual(
+            set(perfil.asignaturas.all()),
+            {self.asignatura, otra_asignatura},
+        )
         self.assertTrue(user.check_password("test-password"))
 
-    def test_profesor_debe_tener_asignatura(self):
-        perfil = Usuario(
-            rol="profesor",
+    def test_profesor_debe_tener_al_menos_una_asignatura(self):
+        serializer = UsuarioSerializer(
+            data={"rol": Usuario.Rol.PROFESOR, "asignaturas": []},
+            partial=True,
         )
 
-        with self.assertRaises(ValidationError) as error:
-            perfil.full_clean()
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("asignaturas", serializer.errors)
 
-        self.assertIn("asignatura", error.exception.message_dict)
+    def test_otros_roles_no_pueden_tener_asignaturas(self):
+        serializer = UsuarioSerializer(
+            data={
+                "rol": Usuario.Rol.PSICOLOGO,
+                "asignaturas": [self.asignatura.pk],
+            },
+            partial=True,
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("asignaturas", serializer.errors)
+
+    def test_admin_form_requires_and_saves_multiple_professor_subjects(self):
+        user = get_user_model().objects.create_user(username="profesor")
+        otra_asignatura = Asignatura.objects.create(
+            nombre="Historia",
+            cantidadNotas=1,
+            porcentajeNotas=[100],
+        )
+        form_data = {
+            "usuario": user.pk,
+            "rol": Usuario.Rol.PROFESOR,
+            "asignaturas": [self.asignatura.pk, otra_asignatura.pk],
+        }
+
+        form = UsuarioInlineForm(data=form_data)
+        self.assertTrue(form.is_valid(), form.errors)
+        perfil = form.save()
+        self.assertEqual(
+            set(perfil.asignaturas.all()),
+            {self.asignatura, otra_asignatura},
+        )
+
+        form_data["asignaturas"] = []
+        form = UsuarioInlineForm(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn("asignaturas", form.errors)
 
     def test_api_root_requires_login(self):
         client = APIClient()
@@ -95,4 +141,12 @@ class UsuarioTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Rol")
-        self.assertContains(response, "Asignatura")
+        self.assertContains(response, "Asignaturas")
+        self.assertContains(
+            response,
+            'name="perfil-0-asignaturas"',
+        )
+        self.assertRegex(
+            response.content.decode(),
+            r'<select[^>]*name="perfil-0-asignaturas"[^>]*multiple',
+        )

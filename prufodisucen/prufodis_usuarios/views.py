@@ -6,11 +6,13 @@ from .serializers import UsuarioSerializer
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):
-    queryset = Usuario.objects.select_related("usuario", "asignatura").all()
+    queryset = Usuario.objects.select_related("usuario").prefetch_related(
+        "asignaturas"
+    )
     serializer_class = UsuarioSerializer
     permission_classes = [RolRequiredPermission]
     required_role = None
-    filterset_fields = ("rol", "asignatura")
+    filterset_fields = ("rol", "asignaturas")
     search_fields = (
         "usuario__username",
         "usuario__first_name",

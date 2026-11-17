@@ -23,11 +23,16 @@ class RolViewSet(viewsets.ModelViewSet):
 class ProfesorAsignaturaViewSet(RolViewSet):
     required_role = Usuario.Rol.PROFESOR
 
-    def get_asignatura_id(self):
-        return self.request.usuario_perfil.asignatura_id
+    def get_asignatura_ids(self):
+        return self.request.usuario_perfil.asignaturas.values_list(
+            "pk",
+            flat=True,
+        )
 
     def ensure_assigned_subject(self, asignatura):
-        if asignatura is None or asignatura.pk != self.get_asignatura_id():
+        if asignatura is None or not self.request.usuario_perfil.asignaturas.filter(
+            pk=asignatura.pk
+        ).exists():
             raise PermissionDenied(PERMISSION_DENIED_MESSAGE)
 
     def perform_create(self, serializer):
@@ -112,7 +117,11 @@ class AsignaturaViewSet(RolViewSet):
             self.action == "list"
             and self.request.usuario_perfil.rol == Usuario.Rol.PROFESOR
         ):
-            return queryset.filter(pk=self.request.usuario_perfil.asignatura_id)
+            asignatura_ids = self.request.usuario_perfil.asignaturas.values_list(
+                "pk",
+                flat=True,
+            )
+            return queryset.filter(pk__in=asignatura_ids)
         return queryset
 
     def update(self, request, *args, **kwargs):
@@ -132,7 +141,7 @@ class DocumentoAsignaturaViewSet(ProfesorAsignaturaViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset().filter(
-            asignatura_id=self.get_asignatura_id()
+            asignatura_id__in=self.get_asignatura_ids()
         )
         if self.action != "list":
             return super().get_queryset()
@@ -158,7 +167,9 @@ class DocumentoAsignaturaViewSet(ProfesorAsignaturaViewSet):
         self.ensure_assigned_subject(asignatura)
 
     def belongs_to_assigned_subject(self, obj):
-        return obj.asignatura_id == self.get_asignatura_id()
+        return self.request.usuario_perfil.asignaturas.filter(
+            pk=obj.asignatura_id
+        ).exists()
 
 
 class AsistenciaViewSet(ProfesorAsignaturaViewSet):
@@ -170,7 +181,7 @@ class AsistenciaViewSet(ProfesorAsignaturaViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
         if self.action == "list":
-            return queryset.filter(asignatura_id=self.get_asignatura_id())
+            return queryset.filter(asignatura_id__in=self.get_asignatura_ids())
         return queryset
 
     def validate_write_scope(self, data, instance=None):
@@ -181,7 +192,9 @@ class AsistenciaViewSet(ProfesorAsignaturaViewSet):
         self.ensure_assigned_subject(asignatura)
 
     def belongs_to_assigned_subject(self, obj):
-        return obj.asignatura_id == self.get_asignatura_id()
+        return self.request.usuario_perfil.asignaturas.filter(
+            pk=obj.asignatura_id
+        ).exists()
 
 
 class AsistenciaEstudianteViewSet(ProfesorAsignaturaViewSet):
@@ -199,7 +212,7 @@ class AsistenciaEstudianteViewSet(ProfesorAsignaturaViewSet):
         queryset = super().get_queryset()
         if self.action == "list":
             return queryset.filter(
-                asistencia__asignatura_id=self.get_asignatura_id()
+                asistencia__asignatura_id__in=self.get_asignatura_ids()
             )
         return queryset
 
@@ -221,7 +234,9 @@ class AsistenciaEstudianteViewSet(ProfesorAsignaturaViewSet):
 
     def belongs_to_assigned_subject(self, obj):
         return (
-            obj.asistencia.asignatura_id == self.get_asignatura_id()
+            self.request.usuario_perfil.asignaturas.filter(
+                pk=obj.asistencia.asignatura_id
+            ).exists()
             and obj.asistencia.asignatura.estudiantes.filter(
                 pk=obj.estudiante_id
             ).exists()
@@ -265,7 +280,7 @@ class EvaluacionesViewSet(ProfesorAsignaturaViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
         if self.action == "list":
-            return queryset.filter(asignatura_id=self.get_asignatura_id())
+            return queryset.filter(asignatura_id__in=self.get_asignatura_ids())
         return queryset
 
     def validate_write_scope(self, data, instance=None):
@@ -285,6 +300,8 @@ class EvaluacionesViewSet(ProfesorAsignaturaViewSet):
 
     def belongs_to_assigned_subject(self, obj):
         return (
-            obj.asignatura_id == self.get_asignatura_id()
+            self.request.usuario_perfil.asignaturas.filter(
+                pk=obj.asignatura_id
+            ).exists()
             and obj.asignatura.estudiantes.filter(pk=obj.estudiante_id).exists()
         )

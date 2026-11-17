@@ -2,11 +2,13 @@ from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin
 
+from .forms import UsuarioInlineForm
 from .models import Usuario
 
 
 class UsuarioInline(admin.StackedInline):
     model = Usuario
+    form = UsuarioInlineForm
     can_delete = False
     extra = 1
 

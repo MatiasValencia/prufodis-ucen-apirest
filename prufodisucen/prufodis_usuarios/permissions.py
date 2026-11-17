@@ -71,7 +71,7 @@ class AsignaturaPermission(BasePermission):
         perfil = request.usuario_perfil
         if (
             perfil.rol == Usuario.Rol.PROFESOR
-            and obj.pk != perfil.asignatura_id
+            and not perfil.asignaturas.filter(pk=obj.pk).exists()
         ):
             raise PermissionDenied(PERMISSION_DENIED_MESSAGE)
 

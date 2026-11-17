@@ -243,10 +243,9 @@ class RolPermissionsTests(TestCase):
             perfil = Usuario.objects.create(
                 usuario=user,
                 rol=rol,
-                asignatura=(
-                    self.asignatura if rol == Usuario.Rol.PROFESOR else None
-                ),
             )
+            if rol == Usuario.Rol.PROFESOR:
+                perfil.asignaturas.add(self.asignatura)
             self.perfiles[rol] = perfil
 
     def client_for(self, rol):
@@ -391,6 +390,36 @@ class RolPermissionsTests(TestCase):
             {
                 "asignatura": self.asignatura.pk,
                 "estudiante": self.estudiante.pk,
+                "nota": "6.0",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201, response.data)
+
+    def test_professor_can_access_records_for_each_assigned_subject(self):
+        perfil = self.perfiles[Usuario.Rol.PROFESOR]
+        perfil.asignaturas.add(self.otra_asignatura)
+        cliente = self.client_for(Usuario.Rol.PROFESOR)
+
+        asistencia = Asistencia.objects.create(
+            asignatura=self.otra_asignatura,
+            fecha="2026-11-16",
+            horaInicio="09:00:00",
+            horaFin="10:00:00",
+        )
+
+        response = cliente.get("/asistencia/")
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual([item["id"] for item in response.data], [asistencia.pk])
+
+        response = cliente.get(f"/asistencia/{asistencia.pk}/")
+        self.assertEqual(response.status_code, 200, response.data)
+
+        response = cliente.post(
+            "/evaluaciones/",
+            {
+                "asignatura": self.otra_asignatura.pk,
+                "estudiante": self.otro_estudiante.pk,
                 "nota": "6.0",
             },
             format="json",
