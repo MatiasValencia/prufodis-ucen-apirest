@@ -17,9 +17,11 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.contrib.auth.views import LoginView
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from prufodis.views import *
+from prufodis_usuarios.forms import EmailAuthenticationForm
 from prufodis_usuarios.views import UsuarioViewSet
 
 router = DefaultRouter()
@@ -38,6 +40,14 @@ router.register('evaluaciones', EvaluacionesViewSet)
 urlpatterns = [
     path("", include(router.urls)),
     path("admin/", admin.site.urls),
+    path(
+        "api-auth/login/",
+        LoginView.as_view(
+            authentication_form=EmailAuthenticationForm,
+            template_name="rest_framework/login.html",
+        ),
+        name="api_login",
+    ),
     path("api-auth/", include("rest_framework.urls")),
 ]
 

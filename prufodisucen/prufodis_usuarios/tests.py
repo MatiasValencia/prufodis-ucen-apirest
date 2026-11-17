@@ -45,7 +45,10 @@ class UsuarioTests(TestCase):
     def test_api_root_requires_login(self):
         client = APIClient()
         self.assertEqual(client.get("/").status_code, 403)
-        self.assertEqual(client.get("/api-auth/login/").status_code, 200)
+        login_page = client.get("/api-auth/login/")
+        self.assertEqual(login_page.status_code, 200)
+        self.assertContains(login_page, 'name="email"')
+        self.assertNotContains(login_page, 'name="username"')
 
         user = get_user_model().objects.create_user(
             username="psicologo",
@@ -56,6 +59,12 @@ class UsuarioTests(TestCase):
         response = client.post(
             "/api-auth/login/",
             {"username": user.username, "password": "test-password"},
+        )
+        self.assertEqual(response.status_code, 200)
+
+        response = client.post(
+            "/api-auth/login/",
+            {"email": user.email, "password": "test-password"},
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, "/")
