@@ -73,6 +73,17 @@ class DocumentoAsignaturaSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class AsistenciaSerializer(serializers.ModelSerializer):
+    horaInicio = serializers.TimeField(
+        format="%I:%M %p",
+        input_formats=["iso-8601", "%I:%M %p"],
+        style={"input_type": "text", "placeholder": "hh:mm AM/PM"},
+    )
+    horaFin = serializers.TimeField(
+        format="%I:%M %p",
+        input_formats=["iso-8601", "%I:%M %p"],
+        style={"input_type": "text", "placeholder": "hh:mm AM/PM"},
+    )
+
     class Meta:
         model = Asistencia
         fields = '__all__'

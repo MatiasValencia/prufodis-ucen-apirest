@@ -1,4 +1,5 @@
 import tempfile
+from datetime import time
 
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -737,6 +738,19 @@ class AsistenciaValidationTests(TestCase):
         self.assertEqual(
             str(serializer.errors["horaFin"][0]),
             "La hora de fin de la clase debe ser mayor a la hora de inicio",
+        )
+
+    def test_serializer_formats_times_as_twelve_hour_and_accepts_iso_input(self):
+        serializer = AsistenciaSerializer()
+        hora_inicio = serializer.fields["horaInicio"]
+
+        self.assertEqual(hora_inicio.to_representation(time(18, 0)), "06:00 PM")
+        self.assertEqual(hora_inicio.to_internal_value("18:00:00"), time(18, 0))
+        self.assertEqual(hora_inicio.to_internal_value("6:00 pm"), time(18, 0))
+        self.assertEqual(hora_inicio.style["input_type"], "text")
+        self.assertEqual(
+            hora_inicio.style["placeholder"],
+            "hh:mm AM/PM",
         )
 
 
