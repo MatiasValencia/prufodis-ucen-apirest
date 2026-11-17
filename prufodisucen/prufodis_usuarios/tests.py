@@ -64,6 +64,8 @@ class UsuarioTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("usuarios", response.data)
         response = client.get("/usuarios/")
+        self.assertEqual(response.status_code, 200)
+        response = client.post("/usuarios/", {}, format="json")
         self.assertEqual(response.status_code, 403)
         self.assertEqual(
             response.data["detail"],

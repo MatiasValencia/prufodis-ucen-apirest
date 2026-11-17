@@ -1,5 +1,5 @@
 from rest_framework.exceptions import PermissionDenied
-from rest_framework.permissions import BasePermission
+from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 from .models import Usuario
 
@@ -19,14 +19,15 @@ class RolRequiredPermission(BasePermission):
             usuario_id=request.user.pk
         ).first()
 
-        if (
-            rol_requerido is None
-            or perfil is None
-            or perfil.rol != rol_requerido
-        ):
+        if perfil is None:
             raise PermissionDenied(PERMISSION_DENIED_MESSAGE)
 
         request.usuario_perfil = perfil
+        if rol_requerido is None or perfil.rol != rol_requerido:
+            if request.method in SAFE_METHODS:
+                return True
+            raise PermissionDenied(PERMISSION_DENIED_MESSAGE)
+
         return True
 
     def has_object_permission(self, request, view, obj):
@@ -51,12 +52,16 @@ class AsignaturaPermission(BasePermission):
             Usuario.Rol.ADMINISTRADOR,
             Usuario.Rol.PROFESOR,
         ):
-            raise PermissionDenied(PERMISSION_DENIED_MESSAGE)
+            if perfil is None:
+                raise PermissionDenied(PERMISSION_DENIED_MESSAGE)
+            if request.method not in SAFE_METHODS:
+                raise PermissionDenied(PERMISSION_DENIED_MESSAGE)
 
         request.usuario_perfil = perfil
         if (
             perfil.rol == Usuario.Rol.PROFESOR
             and view.action not in ("list", "retrieve", "update", "partial_update")
+            and request.method not in SAFE_METHODS
         ):
             raise PermissionDenied(PERMISSION_DENIED_MESSAGE)
 

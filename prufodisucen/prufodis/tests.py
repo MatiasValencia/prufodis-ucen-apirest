@@ -261,7 +261,7 @@ class RolPermissionsTests(TestCase):
             "Usted no tiene los permisos para realizar esta tarea",
         )
 
-    def test_roles_can_only_access_their_allowed_crud_resources(self):
+    def test_roles_can_read_all_resources_but_only_write_allowed_resources(self):
         cases = (
             (
                 Usuario.Rol.ADMINISTRADOR,
@@ -320,7 +320,15 @@ class RolPermissionsTests(TestCase):
                     self.assertEqual(client.get(path).status_code, 200)
             for path in denegadas:
                 with self.subTest(rol=rol, path=path):
-                    self.assert_forbidden(client.get(path))
+                    self.assertEqual(client.get(path).status_code, 200)
+                    for method in ("post", "put", "patch", "delete"):
+                        with self.subTest(method=method):
+                            response = getattr(client, method)(
+                                path,
+                                {},
+                                format="json",
+                            )
+                            self.assert_forbidden(response)
 
     def test_professor_can_only_read_and_write_assigned_subject_records(self):
         cliente = self.client_for(Usuario.Rol.PROFESOR)
@@ -475,7 +483,11 @@ class RolPermissionsTests(TestCase):
 
         for rol in Usuario.Rol.values:
             with self.subTest(rol=rol):
-                self.assert_forbidden(self.client_for(rol).get("/usuarios/"))
+                client = self.client_for(rol)
+                self.assertEqual(client.get("/usuarios/").status_code, 200)
+                self.assert_forbidden(
+                    client.post("/usuarios/", {}, format="json")
+                )
 
     def test_psychologist_can_manage_competency_types(self):
         cliente = self.client_for(Usuario.Rol.PSICOLOGO)
@@ -539,9 +551,9 @@ class RolPermissionsTests(TestCase):
             "/estudiantes/",
             HTTP_ACCEPT="text/html",
         )
-        self.assertEqual(response.status_code, 403)
-        self.assertNotContains(response, 'name="search"', status_code=403)
-        self.assertNotContains(response, 'name="rut"', status_code=403)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="search"')
+        self.assertContains(response, 'name="rut"')
 
     def test_filter_and_search_controls_are_absent_from_root_and_login(self):
         response = self.client_for(Usuario.Rol.PSICOLOGO).get(
