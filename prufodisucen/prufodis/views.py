@@ -52,6 +52,22 @@ class EstudianteViewSet(RolViewSet):
     queryset = Estudiante.objects.all()
     serializer_class = EstudianteSerializer
     required_role = Usuario.Rol.ADMINISTRADOR
+    filterset_fields = (
+        "nombres",
+        "primerApellido",
+        "segundoApellido",
+        "rut",
+        "apoderado",
+        "telefono",
+    )
+    search_fields = (
+        "nombres",
+        "primerApellido",
+        "segundoApellido",
+        "rut",
+        "apoderado",
+        "telefono",
+    )
 
 
 class DocumentoEstudianteViewSet(RolViewSet):
@@ -59,6 +75,13 @@ class DocumentoEstudianteViewSet(RolViewSet):
     serializer_class = DocumentoEstudianteSerializer
     parser_classes = [MultiPartParser, FormParser]
     required_role = Usuario.Rol.PSICOLOGO
+    filterset_fields = ("estudiante", "fechaSubida")
+    search_fields = (
+        "archivo",
+        "estudiante__nombres",
+        "estudiante__primerApellido",
+        "estudiante__segundoApellido",
+    )
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -80,6 +103,8 @@ class AsignaturaViewSet(RolViewSet):
     queryset = Asignatura.objects.all()
     serializer_class = AsignaturaSerializer
     permission_classes = [IsAuthenticated, AsignaturaPermission]
+    filterset_fields = ("nombre", "cantidadNotas", "estudiantes")
+    search_fields = ("nombre",)
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -102,6 +127,8 @@ class DocumentoAsignaturaViewSet(ProfesorAsignaturaViewSet):
     queryset = DocumentoAsignatura.objects.all()
     serializer_class = DocumentoAsignaturaSerializer
     parser_classes = [MultiPartParser, FormParser]
+    filterset_fields = ("asignatura", "fechaSubida")
+    search_fields = ("archivo", "asignatura__nombre")
 
     def get_queryset(self):
         queryset = super().get_queryset().filter(
@@ -137,6 +164,8 @@ class DocumentoAsignaturaViewSet(ProfesorAsignaturaViewSet):
 class AsistenciaViewSet(ProfesorAsignaturaViewSet):
     queryset = Asistencia.objects.all()
     serializer_class = AsistenciaSerializer
+    filterset_fields = ("asignatura", "fecha", "horaInicio", "horaFin")
+    search_fields = ("asignatura__nombre", "estudiantes__nombres")
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -158,6 +187,13 @@ class AsistenciaViewSet(ProfesorAsignaturaViewSet):
 class AsistenciaEstudianteViewSet(ProfesorAsignaturaViewSet):
     queryset = AsistenciaEstudiante.objects.all()
     serializer_class = AsistenciaEstudianteSerializer
+    filterset_fields = ("asistencia", "estudiante", "presente")
+    search_fields = (
+        "asistencia__asignatura__nombre",
+        "estudiante__nombres",
+        "estudiante__primerApellido",
+        "estudiante__segundoApellido",
+    )
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -195,17 +231,35 @@ class AsistenciaEstudianteViewSet(ProfesorAsignaturaViewSet):
 class TipoCompetenciaViewSet(RolViewSet):
     queryset = TipoCompetencia.objects.all()
     serializer_class = TipoCompetenciaSerializer
+    filterset_fields = ("nombreTipoCompetencia",)
+    search_fields = ("nombreTipoCompetencia",)
 
 
 class CompetenciaViewSet(RolViewSet):
     queryset = Competencia.objects.all()
     serializer_class = CompetenciaSerializer
     required_role = Usuario.Rol.PSICOLOGO
+    filterset_fields = ("tipoCompetencia", "estudiante")
+    search_fields = (
+        "nombreCompetencia",
+        "descripcion",
+        "tipoCompetencia__nombreTipoCompetencia",
+        "estudiante__nombres",
+        "estudiante__primerApellido",
+        "estudiante__segundoApellido",
+    )
 
 
 class EvaluacionesViewSet(ProfesorAsignaturaViewSet):
     queryset = Evaluaciones.objects.all()
     serializer_class = EvaluacionesSerializer
+    filterset_fields = ("asignatura", "estudiante", "nota")
+    search_fields = (
+        "asignatura__nombre",
+        "estudiante__nombres",
+        "estudiante__primerApellido",
+        "estudiante__segundoApellido",
+    )
 
     def get_queryset(self):
         queryset = super().get_queryset()

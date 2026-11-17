@@ -481,6 +481,59 @@ class RolPermissionsTests(TestCase):
 
         self.assert_forbidden(client.get("/estudiantes/"))
 
+    def test_filter_and_search_controls_respect_route_permissions(self):
+        accessible_routes = (
+            (Usuario.Rol.ADMINISTRADOR, "/estudiantes/", "rut"),
+            (Usuario.Rol.ADMINISTRADOR, "/asignaturas/", "nombre"),
+            (Usuario.Rol.PROFESOR, "/documentos-asignatura/", "asignatura"),
+            (Usuario.Rol.PROFESOR, "/asistencia/", "fecha"),
+            (Usuario.Rol.PROFESOR, "/asistencia-estudiante/", "presente"),
+            (Usuario.Rol.PROFESOR, "/evaluaciones/", "nota"),
+            (Usuario.Rol.PSICOLOGO, "/documentos-estudiante/", "estudiante"),
+            (Usuario.Rol.PSICOLOGO, "/competencias/", "tipoCompetencia"),
+        )
+        for rol, path, filter_field in accessible_routes:
+            with self.subTest(rol=rol, path=path):
+                response = self.client_for(rol).get(
+                    path,
+                    HTTP_ACCEPT="text/html",
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, 'name="search"')
+                self.assertContains(response, f'name="{filter_field}"')
+
+        response = self.client_for(Usuario.Rol.PSICOLOGO).get(
+            "/estudiantes/",
+            HTTP_ACCEPT="text/html",
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertNotContains(response, 'name="search"', status_code=403)
+        self.assertNotContains(response, 'name="rut"', status_code=403)
+
+    def test_filter_and_search_controls_are_absent_from_root_and_login(self):
+        response = self.client_for(Usuario.Rol.PSICOLOGO).get(
+            "/",
+            HTTP_ACCEPT="text/html",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'name="search"')
+        self.assertNotContains(response, 'name="rut"')
+
+        response = APIClient().get(
+            "/api-auth/login/",
+            HTTP_ACCEPT="text/html",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'name="search"')
+        self.assertNotContains(response, 'name="rut"')
+
+    def test_filter_and_search_query_params_filter_list_results(self):
+        response = self.client_for(Usuario.Rol.ADMINISTRADOR).get(
+            "/estudiantes/?rut=1234567-K&search=Ana"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([item["id"] for item in response.data], [self.estudiante.pk])
+
 
 class AsignaturaValidationTests(TestCase):
     def asignatura(self, **overrides):

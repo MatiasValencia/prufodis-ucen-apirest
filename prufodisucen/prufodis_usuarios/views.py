@@ -10,3 +10,10 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     serializer_class = UsuarioSerializer
     permission_classes = [RolRequiredPermission]
     required_role = None
+    filterset_fields = ("rol", "asignatura")
+    search_fields = (
+        "usuario__username",
+        "usuario__first_name",
+        "usuario__last_name",
+        "rol",
+    )
