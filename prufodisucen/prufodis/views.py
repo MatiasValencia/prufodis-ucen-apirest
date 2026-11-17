@@ -231,6 +231,7 @@ class AsistenciaEstudianteViewSet(ProfesorAsignaturaViewSet):
 class TipoCompetenciaViewSet(RolViewSet):
     queryset = TipoCompetencia.objects.all()
     serializer_class = TipoCompetenciaSerializer
+    required_role = Usuario.Rol.PSICOLOGO
     filterset_fields = ("nombreTipoCompetencia",)
     search_fields = ("nombreTipoCompetencia",)
 

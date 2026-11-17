@@ -296,14 +296,17 @@ class RolPermissionsTests(TestCase):
             ),
             (
                 Usuario.Rol.PSICOLOGO,
-                ("/documentos-estudiante/", "/competencias/"),
+                (
+                    "/documentos-estudiante/",
+                    "/tipo-competencias/",
+                    "/competencias/",
+                ),
                 (
                     "/estudiantes/",
                     "/documentos-asignatura/",
                     "/asignaturas/",
                     "/asistencia/",
                     "/asistencia-estudiante/",
-                    "/tipo-competencias/",
                     "/evaluaciones/",
                     "/usuarios/",
                 ),
@@ -473,6 +476,36 @@ class RolPermissionsTests(TestCase):
         for rol in Usuario.Rol.values:
             with self.subTest(rol=rol):
                 self.assert_forbidden(self.client_for(rol).get("/usuarios/"))
+
+    def test_psychologist_can_manage_competency_types(self):
+        cliente = self.client_for(Usuario.Rol.PSICOLOGO)
+        response = cliente.post(
+            "/tipo-competencias/",
+            {"nombreTipoCompetencia": "Social"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201, response.data)
+        tipo_id = response.data["id"]
+
+        response = cliente.get("/tipo-competencias/")
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual([tipo["id"] for tipo in response.data], [tipo_id])
+
+        response = cliente.get(f"/tipo-competencias/{tipo_id}/")
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["nombreTipoCompetencia"], "Social")
+
+        response = cliente.put(
+            f"/tipo-competencias/{tipo_id}/",
+            {"nombreTipoCompetencia": "Emocional"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["nombreTipoCompetencia"], "Emocional")
+
+        response = cliente.delete(f"/tipo-competencias/{tipo_id}/")
+        self.assertEqual(response.status_code, 204, response.data)
+        self.assertFalse(TipoCompetencia.objects.filter(pk=tipo_id).exists())
 
     def test_authenticated_user_without_role_is_denied(self):
         usuario = get_user_model().objects.create_user(username="sin-rol")
