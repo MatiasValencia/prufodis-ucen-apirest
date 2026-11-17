@@ -9,6 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import FormParser, MultiPartParser
 from prufodis_usuarios.models import Usuario
 from prufodis_usuarios.permissions import (
+    AsignaturaPermission,
     PERMISSION_DENIED_MESSAGE,
     RolRequiredPermission,
 )
@@ -78,7 +79,23 @@ class DocumentoEstudianteViewSet(RolViewSet):
 class AsignaturaViewSet(RolViewSet):
     queryset = Asignatura.objects.all()
     serializer_class = AsignaturaSerializer
-    required_role = Usuario.Rol.ADMINISTRADOR
+    permission_classes = [IsAuthenticated, AsignaturaPermission]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if (
+            self.action == "list"
+            and self.request.usuario_perfil.rol == Usuario.Rol.PROFESOR
+        ):
+            return queryset.filter(pk=self.request.usuario_perfil.asignatura_id)
+        return queryset
+
+    def update(self, request, *args, **kwargs):
+        if request.usuario_perfil.rol == Usuario.Rol.PROFESOR:
+            if set(request.data) - {"estudiantes"}:
+                raise PermissionDenied(PERMISSION_DENIED_MESSAGE)
+            kwargs["partial"] = True
+        return super().update(request, *args, **kwargs)
 
 
 class DocumentoAsignaturaViewSet(ProfesorAsignaturaViewSet):

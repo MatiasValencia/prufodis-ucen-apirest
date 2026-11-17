@@ -37,3 +37,37 @@ class RolRequiredPermission(BasePermission):
             raise PermissionDenied(PERMISSION_DENIED_MESSAGE)
 
         return True
+
+
+class AsignaturaPermission(BasePermission):
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+
+        perfil = Usuario.objects.filter(
+            usuario_id=request.user.pk
+        ).first()
+        if perfil is None or perfil.rol not in (
+            Usuario.Rol.ADMINISTRADOR,
+            Usuario.Rol.PROFESOR,
+        ):
+            raise PermissionDenied(PERMISSION_DENIED_MESSAGE)
+
+        request.usuario_perfil = perfil
+        if (
+            perfil.rol == Usuario.Rol.PROFESOR
+            and view.action not in ("list", "retrieve", "update", "partial_update")
+        ):
+            raise PermissionDenied(PERMISSION_DENIED_MESSAGE)
+
+        return True
+
+    def has_object_permission(self, request, view, obj):
+        perfil = request.usuario_perfil
+        if (
+            perfil.rol == Usuario.Rol.PROFESOR
+            and obj.pk != perfil.asignatura_id
+        ):
+            raise PermissionDenied(PERMISSION_DENIED_MESSAGE)
+
+        return True

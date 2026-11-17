@@ -110,7 +110,8 @@ class Asignatura(models.Model):
     cantidadNotas = models.IntegerField()
     porcentajeNotas = models.JSONField(default=list)
     estudiantes = models.ManyToManyField(
-        Estudiante
+        Estudiante,
+        blank=True,
     )
 
     def clean(self):

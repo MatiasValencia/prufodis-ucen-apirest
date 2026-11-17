@@ -1,3 +1,5 @@
+from collections.abc import Mapping
+
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 from .models import *
@@ -35,15 +37,22 @@ class AsignaturaSerializer(serializers.ModelSerializer):
     estudiantes = serializers.PrimaryKeyRelatedField(
         many=True,
         queryset=Estudiante.objects.all(),
-        allow_empty=False,
-        error_messages={
-            "empty": "La asignatura debe tener al menos un estudiante."
-        },
+        required=False,
     )
 
     class Meta:
         model = Asignatura
         fields = '__all__'
+
+    def to_internal_value(self, data):
+        if (
+            isinstance(data, Mapping)
+            and data.get("estudiantes", serializers.empty) is None
+        ):
+            data = data.copy()
+            data["estudiantes"] = []
+
+        return super().to_internal_value(data)
 
     def validate(self, attrs):
         asignatura = self.instance or Asignatura()
@@ -55,15 +64,6 @@ class AsignaturaSerializer(serializers.ModelSerializer):
             asignatura.clean()
         except DjangoValidationError as error:
             raise serializers.ValidationError(error.message_dict) from error
-
-        if (
-            self.instance is not None
-            and "estudiantes" not in attrs
-            and not self.instance.estudiantes.exists()
-        ):
-            raise serializers.ValidationError({
-                "estudiantes": "La asignatura debe tener al menos un estudiante."
-            })
 
         return attrs
 

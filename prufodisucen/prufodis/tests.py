@@ -284,11 +284,11 @@ class RolPermissionsTests(TestCase):
                     "/asistencia-estudiante/",
                     "/evaluaciones/",
                     "/documentos-asignatura/",
+                    "/asignaturas/",
                 ),
                 (
                     "/estudiantes/",
                     "/documentos-estudiante/",
-                    "/asignaturas/",
                     "/tipo-competencias/",
                     "/competencias/",
                     "/usuarios/",
@@ -386,6 +386,74 @@ class RolPermissionsTests(TestCase):
         )
         self.assertEqual(response.status_code, 201, response.data)
 
+    def test_admin_can_create_subject_without_students(self):
+        response = self.client_for(Usuario.Rol.ADMINISTRADOR).post(
+            "/asignaturas/",
+            {
+                "nombre": "Ciencias",
+                "cantidadNotas": 1,
+                "porcentajeNotas": [100],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201, response.data)
+        asignatura = Asignatura.objects.get(pk=response.data["id"])
+        self.assertFalse(asignatura.estudiantes.exists())
+
+    def test_professor_can_only_manage_students_in_assigned_subject(self):
+        cliente = self.client_for(Usuario.Rol.PROFESOR)
+
+        response = cliente.get("/asignaturas/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [item["id"] for item in response.data],
+            [self.asignatura.pk],
+        )
+        self.assert_forbidden(cliente.get(f"/asignaturas/{self.otra_asignatura.pk}/"))
+        self.assert_forbidden(
+            cliente.post(
+                "/asignaturas/",
+                {
+                    "nombre": "Ciencias",
+                    "cantidadNotas": 1,
+                    "porcentajeNotas": [100],
+                },
+                format="json",
+            )
+        )
+        self.assert_forbidden(
+            cliente.patch(
+                f"/asignaturas/{self.asignatura.pk}/",
+                {"nombre": "Otro nombre"},
+                format="json",
+            )
+        )
+        self.assert_forbidden(
+            cliente.delete(f"/asignaturas/{self.asignatura.pk}/")
+        )
+        self.assertEqual(self.asignatura.nombre, "Matemáticas")
+        self.assertTrue(Asignatura.objects.filter(pk=self.asignatura.pk).exists())
+
+        response = cliente.patch(
+            f"/asignaturas/{self.asignatura.pk}/",
+            {"estudiantes": [self.otro_estudiante.pk]},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(
+            list(self.asignatura.estudiantes.all()),
+            [self.otro_estudiante],
+        )
+
+        response = cliente.patch(
+            f"/asignaturas/{self.asignatura.pk}/",
+            {"estudiantes": None},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertFalse(self.asignatura.estudiantes.exists())
+
     def test_psychologist_can_create_competencies_and_admin_cannot_manage_users(self):
         cliente = self.client_for(Usuario.Rol.PSICOLOGO)
         tipo = TipoCompetencia.objects.create(nombreTipoCompetencia="Social")
@@ -463,7 +531,7 @@ class AsignaturaValidationTests(TestCase):
                     [mensaje],
                 )
 
-    def test_serializer_requires_students_and_preserves_many_to_many_relation(self):
+    def test_serializer_allows_empty_or_null_students_and_preserves_relation(self):
         estudiante = Estudiante.objects.create(
             nombres="Ana",
             primerApellido="Pérez",
@@ -480,11 +548,14 @@ class AsignaturaValidationTests(TestCase):
         }
         serializer = AsignaturaSerializer(data=data)
 
-        self.assertFalse(serializer.is_valid())
-        self.assertEqual(
-            str(serializer.errors["estudiantes"][0]),
-            "La asignatura debe tener al menos un estudiante.",
-        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        asignatura_sin_estudiantes = serializer.save()
+        self.assertFalse(asignatura_sin_estudiantes.estudiantes.exists())
+
+        data["estudiantes"] = None
+        serializer = AsignaturaSerializer(data=data)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(serializer.validated_data["estudiantes"], [])
 
         data["estudiantes"] = [estudiante.pk]
         serializer = AsignaturaSerializer(data=data)
