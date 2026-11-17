@@ -59,8 +59,22 @@ python3 manage.py migrate
 ```
 Esto creará las tablas en la base de datos.
 
+### Crear superusuario
+
+Para poder manejar los usuarios que van a usar el sistema, necesitará crear un superusuario. En la terminal, ejecute:
+
+```
+python3 manage.py createsuperuser
+```
+
+Luego, escriba el nombre que va a tener ese superusuario, seguido de un correo, y la contraseña. Tiene que escribir la contraseña dos veces.
+
+### Levantar el proyecto
+
 Y luego, para levantar el proyecto, ejecute:
 ```
 python3 manage.py runserver
 ```
 Esto le mostrará un link donde usted podrá acceder haciendo clic en él, mientras presiona Ctrl en su teclado. Usted deberá acceder a la interfaz de Django REST Framework.
+
+Para administrar los usuarios, al lado de la dirección IP en el navegador, escriba "/admin". En el login, inserte las credenciales del superusuario. Ahí podrá agregar los usuarios.
